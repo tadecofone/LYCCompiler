@@ -63,8 +63,3 @@ while (a > b)
 }
 
 
-#+ Temas especiales +#
-
-x = negativeCalculation(3.5, -2.0, a, b, -3.0)
-
-x = sumFirstPrimes(5)

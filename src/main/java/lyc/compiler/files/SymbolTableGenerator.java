@@ -1,9 +1,18 @@
 package lyc.compiler.files;
 
+import lyc.compiler.table.SymbolEntry;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.*;
+
+import static lyc.compiler.table.SymbolTableManager.symbolTable;
 
 public class SymbolTableGenerator implements FileGenerator{
+
+    private final int columnNameWidth = 52;
+    private final int columnTypeWidth = 20;
+    private final int columnValueWidth = 52;
+    private final int columnLengthWidth = 24;
 
     @Override
     public void generate(FileWriter fileWriter) throws IOException {

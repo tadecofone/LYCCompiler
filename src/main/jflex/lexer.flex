@@ -88,9 +88,10 @@ Digit19 = [1-9]
 InvalidCharacter = [^a-zA-z0-9<>:,@/\%\+\*\-\.\[\];\(\)=?!]
 
 
-TraditionalComment = "#+" ([^#+] | \#++ [^#+])* "+#"
-NestedComment = "#+" ([^#+] | \#++ [^#+])* ({TraditionalComment})? ([^#+] | \#++ [^#+])* "+#"
+TraditionalComment = "#+" [^#]* "+#"
+NestedComment = "#+" ([^#] | {TraditionalComment})* "+#"
 Comment = {TraditionalComment} | {NestedComment}
+
 
 WhiteSpace = {LineTerminator} | {Identation}
 
@@ -102,6 +103,20 @@ FloatConstant = (({Digit}|{Digit19}{Digit}+)?\.{Digit}+)
 StringConstant = \"(([^\"\n]*)\")
 %%
 
+
+   /* Conditionals */
+   {AndCond}  {
+       System.out.println("Token AND_COND encontrado: " + yytext());
+       return symbol(ParserSym.AND_COND);
+   }
+   {OrCond}  {
+       System.out.println("Token OR_COND encontrado: " + yytext());
+       return symbol(ParserSym.OR_COND);
+   }
+   {NotCond} {
+       System.out.println("Token NOT_COND encontrado: " + yytext());
+       return symbol(ParserSym.NOT_COND);
+   }
 
 /* keywords */
 
@@ -216,7 +231,7 @@ StringConstant = \"(([^\"\n]*)\")
   {Mult}                                    { return symbol(ParserSym.MULT); }
   {Div}                                     { return symbol(ParserSym.DIV); }
   {Rest}                                    { return symbol(ParserSym.REST); }
-  {Assig}                                   { return symbol(ParserSym.ASSIG); }
+  {Assig}                                   { System.out.println("Token ASSIG encontrado" + yytext()); return symbol(ParserSym.ASSIG); }
   {OpenBracket}                             { return symbol(ParserSym.OPEN_BRACKET); }
   {CloseBracket}                            { return symbol(ParserSym.CLOSE_BRACKET); }
   {OpenCurlyBrace}                          { return symbol(ParserSym.OPEN_CURLY_BRACKET); }
@@ -233,12 +248,11 @@ StringConstant = \"(([^\"\n]*)\")
    {Equal}                                  { return symbol(ParserSym.EQUAL); }
    {NotEqual}                               { return symbol(ParserSym.NOT_EQUAL); }
 
-   /* Conditionals */
-   {AndCond}                                { return symbol(ParserSym.AND_COND); }
-   {OrCond}                                 { return symbol(ParserSym.OR_COND); }
-   {NotCond}                                { return symbol(ParserSym.NOT_COND); }
+
+
 
    /* Misc */
+
    {Comma}                                  { return symbol(ParserSym.COMMA); }
    {SemiColon}                              { return symbol(ParserSym.SEMI_COLON); }
    {Dot}                                    { return symbol(ParserSym.DOT); }

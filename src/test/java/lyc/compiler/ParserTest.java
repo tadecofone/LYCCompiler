@@ -15,12 +15,17 @@ import static com.google.common.truth.Truth.assertThat;
 import static lyc.compiler.Constants.EXAMPLES_ROOT_DIRECTORY;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@Disabled
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
+
+
 public class ParserTest {
 
     @Test
     public void assignmentWithExpression() throws Exception {
-        compilationSuccessful("c=d*(e-21)/4");
+        compilationSuccessful("prueba := d *(e-21)/4");
     }
 
     @Test
@@ -92,9 +97,14 @@ public class ParserTest {
     }
 
     private String readFromFile(String fileName) throws IOException {
-        URL url = new URL("../resources" + "/%s".formatted(fileName));
-        assertThat(url).isNotNull();
-        return IOUtils.toString(url.openStream(), StandardCharsets.UTF_8);
+        File file = new File("src/test/java/lyc/resources/" + fileName);
+        // Verificar que el archivo existe
+        if (!file.exists()) {
+            throw new IOException("El archivo no existe: " + file.getAbsolutePath());
+        }
+
+        // Leer el archivo usando Files.readString()
+        return Files.readString(file.toPath(), StandardCharsets.UTF_8);
     }
 
 

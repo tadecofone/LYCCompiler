@@ -21,17 +21,17 @@ public class SymbolTableManager {
         entry.setDataType(dataType);
     }
 
-    public static void removeFromTable(String entryName) {
-        // Reemplazar espacios por guiones bajos para mantener coherencia con insertInTable
-        entryName = entryName.replace(" ", "_");
-
-        if (symbolTable.containsKey(entryName)) {
-            symbolTable.remove(entryName);
-            System.out.println("Removed symbol: " + entryName);
-        } else {
-            System.out.println("Symbol not found: " + entryName);
-        }
-    }
+//    public static void removeFromTable(String entryName) {
+//        // Reemplazar espacios por guiones bajos para mantener coherencia con insertInTable
+//        entryName = entryName.replace(" ", "_");
+//
+//        if (symbolTable.containsKey(entryName)) {
+//            symbolTable.remove(entryName);
+//            System.out.println("Removed symbol: " + entryName);
+//        } else {
+//            System.out.println("Symbol not found: " + entryName);
+//        }
+//    }
 
 
     public static boolean existsInTable(String entryName){
