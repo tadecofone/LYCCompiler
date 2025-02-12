@@ -53,8 +53,8 @@ terminal WRITE;
 terminal READ;
 terminal String IDENTIFIER;
 terminal INIT;
-terminal ALL_EQUAL;
-terminal REPEAT_INLINE;
+terminal NEGATIVE_CALCULATION;
+terminal SUM_FIRST_PRIMES;
 
 
 // Non Terminals
@@ -78,27 +78,30 @@ non terminal read_param;
 non terminal expression;
 non terminal term;
 non terminal factor;
-non terminal all_equal;
-non terminal repeat_inline;
-non terminal comparable_list;
-non terminal comparable;
-non terminal obj_list;
+non terminal negative_calculation;
+non terminal sum_first_primes;
+non terminal c_list;
+non terminal list;
 
 // Start Symbol Definition
 start with program;
 
-program ::= block |{: System.out.println("Compilation Ok"); :};
-block ::= sentence;
-block ::= block sentence;
+program ::= block {: System.out.println("Compilation Ok"); :};
+block ::= sentence
+        | block sentence {: System.out.println("Nueva sentencia en block"); :}
+        ;
+
 sentence ::=
-                INIT {: System.out.println("Variable declaration starts"); :} OPEN_CURLY_BRACKET var_declaration CLOSE_CURLY_BRACKET {: System.out.println("Variable declaration ends"); :}
-                  | decition
-                  | iterator
-                  | assignment
-                  | s_write
-                  | s_read
-                  | all_equal
-                  | repeat_inline;
+       INIT {: System.out.println("Variable declaration starts"); :} OPEN_CURLY_BRACKET var_declaration CLOSE_CURLY_BRACKET {: System.out.println("Variable declaration ends"); :}
+       | decition
+       | iterator
+       | assignment {: System.out.println("Asignación detectada!!!!!"); :}
+       | s_write
+       | s_read
+       | sum_first_primes
+       | negative_calculation;
+
+
 
 var_declaration ::= var_sencente_dec var_declaration ;
 var_declaration ::= var_sencente_dec;
@@ -133,28 +136,118 @@ id_list ::= IDENTIFIER:id {:
 
 decition ::= IF OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {: System.out.println("If statement"); :};
 decition ::= IF OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET ELSE OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {: System.out.println("If else statement"); :};
-condition ::= comparison AND_COND comparison {: System.out.println("And (&&) condition"); :};
-condition ::= comparison OR_COND comparison {: System.out.println("Or (||) condition"); :};
+condition ::= comparison AND_COND comparison {: System.out.println("And  condition"); :};
+condition ::= comparison OR_COND comparison {: System.out.println("Or  condition"); :};
 condition ::= comparison {: System.out.println("Condition = Comparison"); :};
-condition ::= NOT_COND comparison {: System.out.println("Not (!) condition"); :};
-comparison ::= expression comparator expression {: System.out.println("Comparison"); :};
+condition ::= NOT_COND comparison {: System.out.println("Not condition"); :};
+comparison ::= expression:e1 comparator:c expression:e2 {:
+    System.out.println("Comparison detectada: " + e1 + " " + c + " " + e2);
+    RESULT = "(" + e1 + " " + c + " " + e2 + ")";
+:};
+
+
 comparison ::= OPEN_BRACKET condition CLOSE_BRACKET {: System.out.println("Comparison"); :};
-comparator ::= MAYOR | LOWER | MAYOR_I | LOWER_I | EQUAL | NOT_EQUAL {: System.out.println("Comparator"); :};
+comparator ::= MAYOR {: RESULT = ">"; :}
+             | LOWER {: RESULT = "<"; :}
+             | MAYOR_I {: RESULT = ">="; :}
+             | LOWER_I {: RESULT = "<="; :}
+             | EQUAL {: RESULT = "=="; :}
+             | NOT_EQUAL {: RESULT = "!="; :}
+             ;
+
 
 iterator ::= WHILE OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {: System.out.println("While statement"); :};
 
-assignment ::= IDENTIFIER ASSIG expression {: System.out.println("Assignment to integer or float constant"); :};
+assignment ::= IDENTIFIER:id ASSIG expression:e {:
+    System.out.println("Asignación detectada!!!!!");
+    System.out.println("Asignación reconocida: " + id + " := " + (e != null ? e : "ERROR"));
+    RESULT = e != null ? e : "ERROR";
+:};
+
+
 assignment ::= IDENTIFIER ASSIG STRING_CONSTANT {: System.out.println("Assignment to string constant"); :};
-expression ::= expression PLUS term {: System.out.println("+"); :};
-expression ::= expression SUB term {: System.out.println("-"); :};
-expression ::= term {: System.out.println("Expression = Term"); :};
-term ::= term MULT factor {: System.out.println("*"); :};
-term ::= term DIV factor {: System.out.println("/"); :};
-term ::= factor {: System.out.println("Term = factor"); :};
-factor ::= IDENTIFIER:id  {: System.out.println("Id: " + id); :};
-factor ::= INTEGER_CONSTANT:constant {: System.out.println("Integer constant: " + constant ); :};
-factor ::= FLOAT_CONSTANT:constant {: System.out.println("Float constant: " + constant ); :};
-factor ::= OPEN_BRACKET expression CLOSE_BRACKET {: System.out.println("Factor = (Expression)"); :};
+//expression ::= expression PLUS term {: System.out.println("+"); :};
+//expression ::= expression SUB term {: System.out.println("-"); :};
+//expression ::= term {: System.out.println("Expression = Term"); :};
+
+
+expression ::= term:t {:
+    System.out.println("Expression = Term con valor: " + t);
+    RESULT = t;
+:};
+
+expression ::= expression:e PLUS term:t {:
+    System.out.println("Suma detectada: " + e + " + " + t);
+    RESULT = (e != null ? e : "ERROR") + " + " + (t != null ? t : "ERROR");
+:};
+
+expression ::= expression:e SUB term:t {:
+    System.out.println("Resta detectada: " + e + " - " + t);
+    RESULT = (e != null ? e : "ERROR") + " - " + (t != null ? t : "ERROR");
+:};
+
+
+term ::= factor:f {:
+    System.out.println("Term = factor con valor: " + f);
+    RESULT = f;
+:};
+
+term ::= term:tt MULT factor:ff {:
+    System.out.println("Multiplicación detectada: " + tt + " * " + ff);
+    RESULT = tt + " * " + ff;
+:};
+
+term ::= term:tt DIV factor:ff {:
+    System.out.println("División detectada: " + tt + " / " + ff);
+    RESULT = tt + " / " + ff;
+:};
+
+factor ::= IDENTIFIER:id {:
+    System.out.println("Id: " + id);
+    RESULT = id;
+:};
+
+factor ::= INTEGER_CONSTANT:constant {:
+    System.out.println("Integer constant: " + constant);
+    RESULT = constant;
+:};
+
+factor ::= FLOAT_CONSTANT:constant {:
+    System.out.println("Float constant: " + constant);
+    RESULT = constant;
+:};
+
+factor ::= OPEN_BRACKET expression:e CLOSE_BRACKET {:
+    System.out.println("Factor = (Expression) con valor: " + e);
+    RESULT = e != null ? "(" + e + ")" : "ERROR"; //  Asegurar que nunca devuelva null
+:};
+
+
+negative_calculation ::= IDENTIFIER ASSIG NEGATIVE_CALCULATION OPEN_BRACKET c_list CLOSE_BRACKET {:System.out.println("negative-calculation function");:};
+c_list ::= c_list COMMA list ;
+c_list ::= list ;
+list ::= IDENTIFIER:id  {: System.out.println("Id: " + id); :};
+list ::= FLOAT_CONSTANT:constant {: System.out.println("Float constant: " + constant ); :};
+list ::= SUB FLOAT_CONSTANT:constant {: String negativeConstant = "-" + constant;
+                                        String constantStr = constant.toString();
+                                        System.out.println("Float constant: " + negativeConstant);
+                                        SymbolEntry entry = new SymbolEntry("_"+negativeConstant, DataType.FLOAT_CONS, negativeConstant);
+                                            if (SymbolTableManager.existsInTable(constantStr)) {
+                                                SymbolTableManager.removeFromTable(constantStr);
+                                            }
+                                         SymbolTableManager.insertInTable(entry); :};
+
+sum_first_primes ::= IDENTIFIER ASSIG SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_CONSTANT CLOSE_BRACKET {:System.out.println("sum-fist-primes function");:};
+
+
+
+//term ::= term MULT factor {: System.out.println("*"); :};
+//term ::= term DIV factor {: System.out.println("/"); :};
+//term ::= factor {: System.out.println("Term = factor"); :};
+//factor ::= IDENTIFIER:id  {: System.out.println("Id: " + id); :};
+//factor ::= INTEGER_CONSTANT:constant {: System.out.println("Integer constant: " + constant ); :};
+//factor ::= FLOAT_CONSTANT:constant {: System.out.println("Float constant: " + constant ); :};
+//factor ::= OPEN_BRACKET expression CLOSE_BRACKET {: System.out.println("Factor = (Expression)"); :};
 
 s_write ::= WRITE OPEN_BRACKET write_param CLOSE_BRACKET {: System.out.println("Write statement"); :};
 write_param ::= STRING_CONSTANT | IDENTIFIER {: System.out.println("Write parameter"); :};
@@ -162,11 +255,3 @@ write_param ::= STRING_CONSTANT | IDENTIFIER {: System.out.println("Write parame
 s_read ::= READ OPEN_BRACKET read_param CLOSE_BRACKET {: System.out.println("Read statement"); :};
 read_param ::= IDENTIFIER {: System.out.println("Read parameter"); :};
 
-all_equal ::= ALL_EQUAL OPEN_BRACKET comparable_list CLOSE_BRACKET {:System.out.println("All-equal function");:};
-comparable_list ::= comparable_list COMMA comparable;
-comparable_list ::= comparable COMMA comparable;
-comparable  ::= OPEN_SQUARE_BRACKET obj_list CLOSE_SQUARE_BRACKET;
-obj_list ::= obj_list COMMA expression;
-obj_list ::= expression {:System.out.println("Expression in All-equal");:};
-
-repeat_inline ::= REPEAT_INLINE INTEGER_CONSTANT OPEN_SQUARE_BRACKET block CLOSE_SQUARE_BRACKET {:System.out.println("Repeat-inline function");:};

@@ -1,1 +1,68 @@
-c=d*(e-21)/4
+#+ Declaracion de variables +#
+init {
+    nota_1, nota_2, id : Int
+    prom,numero1,numero2 : Float
+    nombre, pedro: String
+}
+
+
+#+ Comentario tipo 1 +#
+
+#+ CO #+ MEN +# TARIO +#
+
+#+ Asignaciones +#
+nombre := "Armando Esteban Quito"
+id := 3
+pedro := "nombre"
+numero1 := 2.4
+numero2 := .42
+
+nota_1 := 8
+nota_2 := 4
+
+
+write("Estado del alumno: ")
+write(nombre)
+
+
+
+#+ Decisiones +#
+if (nota_1 >= 7 AND nota_2 >= 7) {
+    write("Promocionado!")
+} else {
+    if((nota_1 < 7 AND nota_2 >= 7) OR (nota_1 >= 7 AND nota_2 < 7)){
+        write("Aprobado!")
+    } else{
+        write("Recursado :(")
+    }
+}
+
+#+ Condicion not +#
+if(NOT(a < b))
+{
+    write("A es mayor")
+}
+
+#+ Iteracion +#
+while (a > b)
+{
+    write("A mayor que b")
+    if(a > b) {
+        write("A mayor")
+    } else {
+        if (b > a)
+        {
+            write("B mayor")
+        } else {
+        while (b > c )
+        {
+            write("B mayor")
+        }
+        }
+    }
+}
+
+
+x = negativeCalculation(3.5, -2.0, a, b, -3.0)
+
+x = sumFirstPrimes(5)
