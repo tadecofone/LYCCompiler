@@ -53,8 +53,8 @@ terminal WRITE;
 terminal READ;
 terminal String IDENTIFIER;
 terminal INIT;
-terminal ALL_EQUAL;
-terminal REPEAT_INLINE;
+terminal NEGATIVE_CALCULATION;
+terminal SUM_FIRST_PRIMES;
 
 
 // Non Terminals
@@ -78,11 +78,10 @@ non terminal read_param;
 non terminal expression;
 non terminal term;
 non terminal factor;
-non terminal all_equal;
-non terminal repeat_inline;
-non terminal comparable_list;
-non terminal comparable;
-non terminal obj_list;
+non terminal negative_calculation;
+non terminal sum_first_primes;
+non terminal c_list;
+non terminal list;
 
 // Start Symbol Definition
 start with program;
@@ -97,8 +96,8 @@ sentence ::=
                   | assignment
                   | s_write
                   | s_read
-                  | all_equal
-                  | repeat_inline;
+                  | sum_first_primes
+                  | negative_calculation;
 
 var_declaration ::= var_sencente_dec var_declaration ;
 var_declaration ::= var_sencente_dec;
@@ -136,7 +135,7 @@ decition ::= IF OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CL
 condition ::= comparison AND_COND comparison {: System.out.println("And (&&) condition"); :};
 condition ::= comparison OR_COND comparison {: System.out.println("Or (||) condition"); :};
 condition ::= comparison {: System.out.println("Condition = Comparison"); :};
-condition ::= NOT_COND comparison {: System.out.println("Not (!) condition"); :};
+condition ::= NOT_COND comparison {: System.out.println("Not condition"); :};
 comparison ::= expression comparator expression {: System.out.println("Comparison"); :};
 comparison ::= OPEN_BRACKET condition CLOSE_BRACKET {: System.out.println("Comparison"); :};
 comparator ::= MAYOR | LOWER | MAYOR_I | LOWER_I | EQUAL | NOT_EQUAL {: System.out.println("Comparator"); :};
@@ -162,11 +161,17 @@ write_param ::= STRING_CONSTANT | IDENTIFIER {: System.out.println("Write parame
 s_read ::= READ OPEN_BRACKET read_param CLOSE_BRACKET {: System.out.println("Read statement"); :};
 read_param ::= IDENTIFIER {: System.out.println("Read parameter"); :};
 
-all_equal ::= ALL_EQUAL OPEN_BRACKET comparable_list CLOSE_BRACKET {:System.out.println("All-equal function");:};
-comparable_list ::= comparable_list COMMA comparable;
-comparable_list ::= comparable COMMA comparable;
-comparable  ::= OPEN_SQUARE_BRACKET obj_list CLOSE_SQUARE_BRACKET;
-obj_list ::= obj_list COMMA expression;
-obj_list ::= expression {:System.out.println("Expression in All-equal");:};
+negative_calculation ::= NEGATIVE_CALCULATION OPEN_BRACKET c_list CLOSE_BRACKET {:System.out.println("negative-calculation function");:};
+c_list ::= c_list COMMA list
+c_list ::= list
+list ::= IDENTIFIER:id  {: System.out.println("Id: " + id); :};
+list ::= FLOAT_CONSTANT:constant {: System.out.println("Float constant: " + constant ); :};
+list ::= SUB FLOAT_CONSTANT:constant {: String negativeConstant = "-" + constant;
+                                        System.out.println("Float constant: " + negativeConstant);
+                                        SymbolEntry entry = new SymbolEntry("_"+negativeConstant, DataType.FLOAT_CONS, negativeConstant);
+                                            if (SymbolTableManager.existsInTable(constant)) {
+                                                SymbolTableManager.removeFromTable(constant);
+                                            }
+                                         SymbolTableManager.insertInTable(entry); :};
 
-repeat_inline ::= REPEAT_INLINE INTEGER_CONSTANT OPEN_SQUARE_BRACKET block CLOSE_SQUARE_BRACKET {:System.out.println("Repeat-inline function");:};
+sum_first_primes ::= SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_CONSTANT CLOSE_BRACKET {:System.out.println("sum-fist-primes function");:};

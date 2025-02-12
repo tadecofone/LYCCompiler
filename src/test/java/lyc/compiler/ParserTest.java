@@ -92,7 +92,7 @@ public class ParserTest {
     }
 
     private String readFromFile(String fileName) throws IOException {
-        URL url = new URL(EXAMPLES_ROOT_DIRECTORY + "/%s".formatted(fileName));
+        URL url = new URL("../resources" + "/%s".formatted(fileName));
         assertThat(url).isNotNull();
         return IOUtils.toString(url.openStream(), StandardCharsets.UTF_8);
     }

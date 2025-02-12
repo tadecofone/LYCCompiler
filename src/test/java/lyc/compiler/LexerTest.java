@@ -30,6 +30,7 @@ public class LexerTest {
     assertThat(nextToken()).isEqualTo(ParserSym.EOF);
   }
 
+
   @Test
   public void invalidStringConstantLength() {
     assertThrows(InvalidLengthException.class, () -> {
@@ -37,6 +38,7 @@ public class LexerTest {
       nextToken();
     });
   }
+
 
   @Test
   public void invalidIdLength() {
