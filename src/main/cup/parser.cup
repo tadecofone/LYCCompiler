@@ -98,7 +98,8 @@ sentence ::=
        | assignment {: System.out.println("Asignación detectada!!!!!"); :}
        | s_write
        | s_read
-       ;
+       | sum_first_primes
+       | negative_calculation;
 
 
 
@@ -222,7 +223,21 @@ factor ::= OPEN_BRACKET expression:e CLOSE_BRACKET {:
 :};
 
 
+negative_calculation ::= IDENTIFIER ASSIG NEGATIVE_CALCULATION OPEN_BRACKET c_list CLOSE_BRACKET {:System.out.println("negative-calculation function");:};
+c_list ::= c_list COMMA list ;
+c_list ::= list ;
+list ::= IDENTIFIER:id  {: System.out.println("Id: " + id); :};
+list ::= FLOAT_CONSTANT:constant {: System.out.println("Float constant: " + constant ); :};
+list ::= SUB FLOAT_CONSTANT:constant {: String negativeConstant = "-" + constant;
+                                        String constantStr = constant.toString();
+                                        System.out.println("Float constant: " + negativeConstant);
+                                        SymbolEntry entry = new SymbolEntry("_"+negativeConstant, DataType.FLOAT_CONS, negativeConstant);
+                                            if (SymbolTableManager.existsInTable(constantStr)) {
+                                                SymbolTableManager.removeFromTable(constantStr);
+                                            }
+                                         SymbolTableManager.insertInTable(entry); :};
 
+sum_first_primes ::= IDENTIFIER ASSIG SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_CONSTANT CLOSE_BRACKET {:System.out.println("sum-fist-primes function");:};
 
 
 

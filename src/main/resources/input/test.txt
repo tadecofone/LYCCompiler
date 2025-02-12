@@ -63,3 +63,6 @@ while (a > b)
 }
 
 
+x = negativeCalculation(3.5, -2.0, a, b, -3.0)
+
+x = sumFirstPrimes(5)

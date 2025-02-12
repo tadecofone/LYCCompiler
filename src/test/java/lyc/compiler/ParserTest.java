@@ -83,6 +83,16 @@ public class ParserTest {
         compilationSuccessful(readFromFile("while.txt"));
     }
 
+    @Test
+    void negativeCalculations() throws Exception {
+        compilationSuccessful(readFromFile("negativecalculations.txt"));
+    }
+
+    @Test
+    void sumFirstPrimes() throws Exception {
+        compilationSuccessful(readFromFile("sumfirstprimes.txt"));
+    }
+
 
     private void compilationSuccessful(String input) throws Exception {
         assertThat(scan(input).sym).isEqualTo(ParserSym.EOF);
