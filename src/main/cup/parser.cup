@@ -1,20 +1,24 @@
 package lyc.compiler;
 
-import java_cup.runtime.*;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 import lyc.compiler.table.*;
-import java.util.HashMap;
+import lyc.compiler.model.*;
+import lyc.compiler.tree.*;
+import java.math.BigInteger;
 
-class Parser;
-
-action code {:
+parser code {:
+    // Variables globales y métodos para la clase Parser
     HashMap<String, SymbolEntry> symbolTable = SymbolTableManager.symbolTable;
     List<String> idList = new ArrayList<>();
     DataType dataType;
-:}
+    String currentComparator; // Se usa en las comparaciones
+    //List<Integer> primesList = new ArrayList<>();
 
-// Terminals
+
+    // Si también quieres métodos de evaluación en tiempo de compilación, los puedes agregar aquí
+:};
+
+// TERMINALES (se mantienen iguales)
 terminal ASSIG;
 terminal PLUS;
 terminal SUB;
@@ -56,8 +60,7 @@ terminal INIT;
 terminal NEGATIVE_CALCULATION;
 terminal SUM_FIRST_PRIMES;
 
-
-// Non Terminals
+// NO TERMINALES
 non terminal program;
 non terminal block;
 non terminal sentence;
@@ -66,6 +69,7 @@ non terminal var_sencente_dec;
 non terminal data_type;
 non terminal id_list;
 non terminal decition;
+non terminal decitionAux;
 non terminal condition;
 non terminal comparison;
 non terminal comparator;
@@ -82,57 +86,84 @@ non terminal negative_calculation;
 non terminal sum_first_primes;
 non terminal c_list;
 non terminal list;
+non terminal trueBody;
+non terminal falseBody;
 
-// Start Symbol Definition
+// Símbolo de partida
 start with program;
 
-program ::= block {: System.out.println("Compilation Ok"); :};
-block ::= sentence
-        | block sentence {: System.out.println("Nueva sentencia en block"); :}
-        ;
+program ::= block {:
+    System.out.println("Compilation Ok");
+    Node root = new Node();
 
-sentence ::=
-       INIT {: System.out.println("Variable declaration starts"); :} OPEN_CURLY_BRACKET var_declaration CLOSE_CURLY_BRACKET {: System.out.println("Variable declaration ends"); :}
-       | decition
-       | iterator
-       | assignment {: System.out.println("Asignación detectada!!!!!"); :}
-       | s_write
-       | s_read
-       | sum_first_primes
-       | negative_calculation;
+    ASTManager.programIdx.setNode(root);
+    ASTManager.setRoot(root);
+    System.out.println("AST generado: " + root);
+    $$ = root;
+:};
 
+block ::= sentence;
+block ::= block sentence;
 
+sentence ::= INIT {: System.out.println("Variable declaration starts"); :} OPEN_CURLY_BRACKET var_declaration CLOSE_CURLY_BRACKET {: System.out.println("Variable declaration ends"); :}
+           | decition
+           | iterator
+           | assignment
+           | s_write
+           | s_read
+           | sum_first_primes
+           | negative_calculation
+           ;
 
-var_declaration ::= var_sencente_dec var_declaration ;
-var_declaration ::= var_sencente_dec;
+// VAR_DECLARATION
+var_declaration ::= var_sencente_dec var_declaration {:
+//    Node declNode = new Node("VarDeclaration");
+//    declNode.addChild($1);
+//    declNode.addChild($2);
+//    ASTManager.var_declarationIdx.setNode(declNode);
+:}
+                    | var_sencente_dec {:
+
+:};
+
 var_sencente_dec ::= id_list DOUBLE_DOT data_type {:
     for (String id : idList) {
-        SymbolTableManager.setDataTypeInTable(id, dataType);
+         SymbolTableManager.setDataTypeInTable(id, dataType);
     }
     idList.removeAll(idList);
+//    $$ = new Node("VarDecl", $1, $3);
+//    ASTManager.var_sencente_decIdx.setNode($$);
 :};
+
 data_type ::=
-              INT {:
+              INT:type {:
                 System.out.println("Int data type");
                 dataType = DataType.INTEGER_TYPE;
+
+
             :}
-            | FLOAT {:
+            | FLOAT:type {:
                 System.out.println("Float data type");
                 dataType = DataType.FLOAT_TYPE;
+
             :}
-            | STRING {:
+            | STRING:type {:
                 System.out.println("String data type");
                 dataType = DataType.STRING_TYPE;
+
             :};
 
 id_list ::= id_list COMMA IDENTIFIER:id {:
-    System.out.println("ID declared: " + id);
+    System.out.println("ID declarado: " + id);
     idList.add(id);
-:} ;
+
+:};
+
 id_list ::= IDENTIFIER:id {:
-    System.out.println("ID declared: " + id);
+    System.out.println("ID declarado: " + id);
     idList.add(id);
- :};
+
+:};
 
 decition ::= IF OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {: System.out.println("If statement"); :};
 decition ::= IF OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET ELSE OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {: System.out.println("If else statement"); :};
@@ -155,103 +186,154 @@ comparator ::= MAYOR {: RESULT = ">"; :}
              | NOT_EQUAL {: RESULT = "!="; :}
              ;
 
+iterator ::= WHILE OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {:
+    System.out.println("Sentencia while");
 
-iterator ::= WHILE OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {: System.out.println("While statement"); :};
-
-assignment ::= IDENTIFIER:id ASSIG expression:e {:
-    System.out.println("Asignación detectada!!!!!");
-    System.out.println("Asignación reconocida: " + id + " := " + (e != null ? e : "ERROR"));
-    RESULT = e != null ? e : "ERROR";
 :};
 
-
-assignment ::= IDENTIFIER ASSIG STRING_CONSTANT {: System.out.println("Assignment to string constant"); :};
-//expression ::= expression PLUS term {: System.out.println("+"); :};
-//expression ::= expression SUB term {: System.out.println("-"); :};
-//expression ::= term {: System.out.println("Expression = Term"); :};
-
+assignment ::= IDENTIFIER:id ASSIG expression {:
+    System.out.println("Asignación a variable " + id);
+   // if (Utils.checkIdExpresionType(id, true, false)) {
+   //      $$ = new Node("=", new Node(id.toString()), $3);
+   //      ASTManager.assignmentIdx.setNode($$);
+   // }
+:};
+assignment ::= IDENTIFIER:id ASSIG STRING_CONSTANT:str {:
+    System.out.println("Asignación de cadena a variable " + id);
+   // if (Utils.checkIdExpresionType(id, true, true)) {
+    //     $$ = new Node("=", new Node(id.toString()), new Node(str.toString()));
+    //     ASTManager.assignmentIdx.setNode($$);
+    //}
+:};
 
 expression ::= term:t {:
     System.out.println("Expression = Term con valor: " + t);
-    RESULT = t;
+   ASTManager.expressionIdx.setNode(ASTManager.termIdx.getNode());
 :};
 
 expression ::= expression:e PLUS term:t {:
     System.out.println("Suma detectada: " + e + " + " + t);
-    RESULT = (e != null ? e : "ERROR") + " + " + (t != null ? t : "ERROR");
+ASTManager.termIdx.setNode(new Node("+",ASTManager.expressionidx.getNode(),ASTManager.termIdx.getNode()));
+
 :};
 
 expression ::= expression:e SUB term:t {:
     System.out.println("Resta detectada: " + e + " - " + t);
-    RESULT = (e != null ? e : "ERROR") + " - " + (t != null ? t : "ERROR");
+ASTManager.termIdx.setNode(new Node("-",ASTManager.expressionidx.getNode(),ASTManager.termIdx.getNode()));
 :};
-
 
 term ::= factor:f {:
     System.out.println("Term = factor con valor: " + f);
-    RESULT = f;
+  ASTManager.termIdx.setNode(ASTManager.factorIdx.getNode());
 :};
 
 term ::= term:tt MULT factor:ff {:
     System.out.println("Multiplicación detectada: " + tt + " * " + ff);
-    RESULT = tt + " * " + ff;
+ASTManager.termIdx.setNode(new Node("*",ASTManager.termidx.getNode(),ASTManager.factorIdx.getNode()));
 :};
 
 term ::= term:tt DIV factor:ff {:
     System.out.println("División detectada: " + tt + " / " + ff);
-    RESULT = tt + " / " + ff;
+    ASTManager.termIdx.setNode(new Node("/",ASTManager.termidx.getNode(),ASTManager.factorIdx.getNode()));
 :};
 
 factor ::= IDENTIFIER:id {:
     System.out.println("Id: " + id);
-    RESULT = id;
+    ASTManager.factorIdx.setNode(new Node(id));
 :};
 
 factor ::= INTEGER_CONSTANT:constant {:
     System.out.println("Integer constant: " + constant);
-    RESULT = constant;
+    ASTManager.factorIdx.setNode(new Node(constant));
 :};
 
 factor ::= FLOAT_CONSTANT:constant {:
     System.out.println("Float constant: " + constant);
-    RESULT = constant;
+    ASTManager.factorIdx.setNode(new Node(constant));
 :};
 
 factor ::= OPEN_BRACKET expression:e CLOSE_BRACKET {:
     System.out.println("Factor = (Expression) con valor: " + e);
-    RESULT = e != null ? "(" + e + ")" : "ERROR"; //  Asegurar que nunca devuelva null
+
+   // $$ = e;
+   // ASTManager.factorIdx.setNode($$);
 :};
 
+negative_calculation ::= IDENTIFIER:id ASSIG NEGATIVE_CALCULATION OPEN_BRACKET c_list:cl CLOSE_BRACKET {:
+    System.out.println("negative-calculation function");
+  //  $$ = new Node("=", new Node(id), new Node("negative_calculation", cl));
+   // ASTManager.negative_calculationsIdx.setNode($$);
+:};
 
-negative_calculation ::= IDENTIFIER ASSIG NEGATIVE_CALCULATION OPEN_BRACKET c_list CLOSE_BRACKET {:System.out.println("negative-calculation function");:};
-c_list ::= c_list COMMA list ;
-c_list ::= list ;
-list ::= IDENTIFIER:id  {: System.out.println("Id: " + id); :};
-list ::= FLOAT_CONSTANT:constant {: System.out.println("Float constant: " + constant ); :};
-list ::= SUB FLOAT_CONSTANT:constant {: String negativeConstant = "-" + constant;
-                                        String constantStr = constant.toString();
-                                        System.out.println("Float constant: " + negativeConstant);
-                                        SymbolEntry entry = new SymbolEntry("_"+negativeConstant, DataType.FLOAT_CONS, negativeConstant);
-                                            if (SymbolTableManager.existsInTable(constantStr)) {
-                                                SymbolTableManager.removeFromTable(constantStr);
-                                            }
-                                         SymbolTableManager.insertInTable(entry); :};
+c_list ::= c_list:cl COMMA list:l {:
+    cl.addChild(l);
+  //  $$ = cl;
+   // ASTManager.c_listIdx.setNode($$);
+:};
 
-sum_first_primes ::= IDENTIFIER ASSIG SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_CONSTANT CLOSE_BRACKET {:System.out.println("sum-fist-primes function");:};
+c_list ::= list:l {:
+  //  $$ = new Node("c_list");
+  //  $$.addChild(l);
+  //  ASTManager.c_listIdx.setNode($$);
+:};
 
+list ::= IDENTIFIER:id {:
+    System.out.println("Id: " + id);
+ //   $$ = new Node(id);
+  //  ASTManager.listIdx.setNode($$);
+:};
 
+list ::= FLOAT_CONSTANT:constant {:
+    System.out.println("Float constant: " + constant);
+  //  $$ = new Node(constant);
+  //  ASTManager.listIdx.setNode($$);
+:};
 
-//term ::= term MULT factor {: System.out.println("*"); :};
-//term ::= term DIV factor {: System.out.println("/"); :};
-//term ::= factor {: System.out.println("Term = factor"); :};
-//factor ::= IDENTIFIER:id  {: System.out.println("Id: " + id); :};
-//factor ::= INTEGER_CONSTANT:constant {: System.out.println("Integer constant: " + constant ); :};
-//factor ::= FLOAT_CONSTANT:constant {: System.out.println("Float constant: " + constant ); :};
-//factor ::= OPEN_BRACKET expression CLOSE_BRACKET {: System.out.println("Factor = (Expression)"); :};
+list ::= SUB FLOAT_CONSTANT:constant {:
+    String negativeConstant = "-" + constant;
+    System.out.println("Float constant: " + negativeConstant);
+    String constantStr = constant.toString();
+    SymbolEntry entry = new SymbolEntry("_" + negativeConstant, DataType.FLOAT_CONS, negativeConstant);
+    if (SymbolTableManager.existsInTable(constantStr)) {
+        SymbolTableManager.removeFromTable(constantStr);
+    }
+    SymbolTableManager.insertInTable(entry);
+  //  $$ = new Node(negativeConstant);
+  //  ASTManager.listIdx.setNode($$);
+:};
 
-s_write ::= WRITE OPEN_BRACKET write_param CLOSE_BRACKET {: System.out.println("Write statement"); :};
-write_param ::= STRING_CONSTANT | IDENTIFIER {: System.out.println("Write parameter"); :};
+sum_first_primes ::= IDENTIFIER:id ASSIG SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_CONSTANT:num CLOSE_BRACKET {:
+    System.out.println("sum-first-primes function");
 
-s_read ::= READ OPEN_BRACKET read_param CLOSE_BRACKET {: System.out.println("Read statement"); :};
-read_param ::= IDENTIFIER {: System.out.println("Read parameter"); :};
+    int n = Integer.parseInt(num.toString());
+        if(n <= 0) {
+             throw new SemanticException("Error semántico: sumFirstPrimes requiere un valor mayor que 0, se recibió: " + n);
+            }
+    int aux = 0;
+    int aux2 = 2;
+    int sum = 0;
+    while (aux < n) {
+     if(BigInteger.valueOf(aux2).isProbablePrime(20)) {
+        sum+=aux2;
+        aux++;
+      }
+      else {
+      aux2++;
+      }
+    }
+    ASTManager.sum_first_primesIdx.setNode(new Node("=", new Node(id), new Node(sum) ));
+:};
 
+s_write ::= WRITE OPEN_BRACKET STRING_CONSTANT:string_constant CLOSE_BRACKET {:
+    System.out.println("Sentencia write (cadena)");
+  //  $$ = new Node("write", new Node(string_constant.toString()));
+:}
+          | WRITE OPEN_BRACKET IDENTIFIER:id CLOSE_BRACKET {:
+    System.out.println("Sentencia write (identificador)");
+  //  $$ = new Node("write", new Node(id.toString()));
+:};
+
+s_read ::= READ OPEN_BRACKET IDENTIFIER:id CLOSE_BRACKET {:
+    System.out.println("Sentencia read");
+  //  $$ = new Node("read", new Node(id.toString()));
+:};
