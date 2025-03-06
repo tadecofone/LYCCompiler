@@ -1,3 +1,8 @@
+init {
+    a : Int
+    b : String
+}
+
 a := 999
 a := 99
 a := 999

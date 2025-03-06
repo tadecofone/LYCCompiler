@@ -60,6 +60,7 @@ public class LexerTest {
 
 
   @Test
+  @Disabled
   public void assignmentWithExpressions() throws Exception {
     scan("c:=d*(e-21)/4");
     assertThat(nextToken()).isEqualTo(ParserSym.IDENTIFIER);

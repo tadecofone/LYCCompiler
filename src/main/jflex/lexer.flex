@@ -47,6 +47,8 @@ Else = "else"
 Write = "write"
 Read = "read"
 
+FloatConstant = -?[0-9]+(\.[0-9]+)?
+
 /* Special Functions */
 NegativeCalculation = "negativeCalculation"
 SumFirstPrimes = "sumFirstPrimes"
@@ -99,7 +101,7 @@ Identifier = {Letter} ({Letter}|{Digit}|_)*
 
 IntegerConstant = {Digit}+
 InvalidIntegerConstant = 0+{Digit19}+
-FloatConstant = (({Digit}|{Digit19}{Digit}+)?\.{Digit}+)
+
 StringConstant = \"(([^\"\n]*)\")
 %%
 
@@ -173,36 +175,52 @@ StringConstant = \"(([^\"\n]*)\")
                                                 return symbol(ParserSym.INTEGER_CONSTANT, yytext());
                                             }
 
-  {FloatConstant}                          {
-                                                String[] num = yytext().split("\\.");
-                                                String exp = num[0];
-                                                String mantissa = num[1];
+  {FloatConstant}                           {
+                                               String lexeme = yytext();  // Por ejemplo, "-12.34"
 
-                                                if(exp.length() > 0)
-                                                    {
-                                                       if(exp.length() > 3 || Integer.parseInt(exp) > 256 )
-                                                           throw new InvalidFloatException("Exponent out of range: " + yytext());
-                                                    }
+                                               // 1. Ver si tiene un signo "-"
+                                               boolean negative = false;
+                                               if (lexeme.startsWith("-")) {
+                                                   negative = true;
+                                                   // quitar el '-' para el split y parseInt
+                                                   lexeme = lexeme.substring(1);  // Ej: de "-12.34" pasa a "12.34"
+                                               }
 
-                                                if(mantissa.length() > 0) {
-                                                  if(mantissa.length() > 8 || Integer.parseInt(mantissa) > 16777216)
-                                                      throw new InvalidFloatException("Mantissa out of range: " + yytext());
-                                                }
+                                               // 2. Tomar parte entera y parte fraccionaria
+                                               String[] num = lexeme.split("\\.");
+                                               String exp = num[0];            // parte entera
+                                               String mantissa = "0";
+                                               if(num.length > 1) {
+                                                   mantissa = num[1];         // parte decimal
+                                               }
 
-                                                if(!SymbolTableManager.existsInTable(yytext())){
-                                                    String val = yytext();
-                                                    if(yytext().startsWith("."))
-                                                          val = "0" + yytext();
-                                                      SymbolEntry entry = new SymbolEntry("_"+val, DataType.FLOAT_CONS, val);
-                                                      SymbolTableManager.insertInTable(entry);
-                                                }
+                                               // Verificación de rangos
+                                               if(!exp.isEmpty()) {
+                                                   if(exp.length() > 3 || Integer.parseInt(exp) > 256) {
+                                                      throw new InvalidFloatException("Exponent out of range: " + yytext());
+                                                   }
+                                               }
+                                               if(!mantissa.isEmpty()) {
+                                                   if(mantissa.length() > 8 || Integer.parseInt(mantissa) > 16777216)
+                                                       throw new InvalidFloatException("Mantissa out of range: " + yytext());
+                                               }
 
-                                                if(mantissa.length() > 0) {
-                                                  if(mantissa.length() > 8 || Integer.parseInt(mantissa) > 16777216)
-                                                      throw new InvalidFloatException("Mantissa out of range");
-                                                }
-                                                return symbol(ParserSym.FLOAT_CONSTANT, yytext());
-                                            }
+                                               // 3. Insertar en la tabla de símbolos
+                                               //    Conserva el valor original con el signo si era negativo
+                                               String originalValue = yytext(); // ej: "-12.34"
+                                               if (!SymbolTableManager.existsInTable(originalValue)) {
+                                                   String val = originalValue;
+                                                   if(val.startsWith(".")) {
+                                                       val = "0" + val;
+                                                   }
+                                                   SymbolEntry entry = new SymbolEntry("_" + val, DataType.FLOAT_CONS, val);
+                                                   SymbolTableManager.insertInTable(entry);
+                                               }
+
+                                               // 4. Retornar el token FLOAT_CONSTANT con el valor completo (incluido el signo si lo tenía)
+                                               return symbol(ParserSym.FLOAT_CONSTANT, originalValue);
+                                           }
+
 
   {StringConstant}                         {
                                                 sb = new StringBuffer(yytext());

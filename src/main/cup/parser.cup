@@ -1,313 +1,457 @@
 package lyc.compiler;
 
-import java.util.*;
+import java_cup.runtime.*;
+import lyc.compiler.tree.GestorNodos;
 import lyc.compiler.table.*;
-import lyc.compiler.model.*;
-import lyc.compiler.tree.*;
-import java.math.BigInteger;
-
-parser code {:
-    // Variables globales y métodos para la clase Parser
-    HashMap<String, SymbolEntry> symbolTable = SymbolTableManager.symbolTable;
-    List<String> idList = new ArrayList<>();
-    DataType dataType;
-    String currentComparator; // Se usa en las comparaciones
-    //List<Integer> primesList = new ArrayList<>();
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Stack;
+import java.util.List;
+import lyc.compiler.tree.ASTManager;
+import java.math.*;
+import lyc.compiler.files.*;
+import java.io.IOException;
 
 
-    // Si también quieres métodos de evaluación en tiempo de compilación, los puedes agregar aquí
-:};
+class Parser;
 
-// TERMINALES (se mantienen iguales)
-terminal ASSIG;
-terminal PLUS;
-terminal SUB;
-terminal MULT;
-terminal DIV;
-terminal REST;
-terminal MAYOR;
-terminal LOWER;
-terminal MAYOR_I;
-terminal LOWER_I;
-terminal EQUAL;
-terminal NOT_EQUAL;
-terminal AND_COND;
-terminal OR_COND;
-terminal NOT_COND;
-terminal OPEN_BRACKET;
-terminal CLOSE_BRACKET;
-terminal OPEN_CURLY_BRACKET;
-terminal CLOSE_CURLY_BRACKET;
-terminal OPEN_SQUARE_BRACKET;
-terminal CLOSE_SQUARE_BRACKET;
-terminal COMMA;
-terminal SEMI_COLON;
-terminal DOT;
-terminal DOUBLE_DOT;
-terminal INTEGER_CONSTANT;
-terminal FLOAT_CONSTANT;
-terminal STRING_CONSTANT;
-terminal INT;
-terminal FLOAT;
-terminal STRING;
-terminal IF;
-terminal ELSE;
-terminal WHILE;
-terminal WRITE;
-terminal READ;
+action code {:
+
+  // Variables globales y métodos para la clase Parser
+
+  ASTManager astManager;
+  IntermediateCodeGenerator intermediateCodeGenerator;
+  GestorNodos gestorNodos;
+  HashMap<String, SymbolEntry> symbolTable = SymbolTableManager.symbolTable;
+  List<String> idList = new ArrayList<>();
+  Stack<Integer> conditionStack = new Stack<>();
+  Stack<Integer> trueStack = new Stack<>();
+  Stack<Integer> falseStack = new Stack<>();
+  Stack<Integer> auxExpressionStack = new Stack<>();
+  Stack<Integer> auxTermStack = new Stack<>();
+
+  DataType dataType;
+
+      //Indices:
+      int expressionIdx;
+      int termIdx;
+      int factorIdx;
+      int programIdx;
+      int blockIdx;
+      int sentenceIdx;
+      int vardeclarationIdx;
+      int varsentenceIdx;
+      int datatypeIdx;
+      int idlistIdx;
+      int decitionIdx;
+      int conditionIdx;
+      int comparisonIdx;
+      int comparatorIdx;
+      int iterationIdx;
+      int assigIdx;
+      int s_writeIdx;
+      int s_readIdx;
+      int write_paramIdx;
+      int read_paramIdx;
+      int sum_first_primesIdx;
+      int negative_calculationIdx;
+      int c_listIdx;
+      int listIdx;
+      int cuerpoIdx;
+      int cizquierdoIdx;
+      int auxcmpIdx;
+      String comparator;
+
+      //Para Negative calculations:
+      int c;
+      int sum;
+      int mult;
+      int auxnc;
+      int auxncIdx;
+      int ifIdx;
+      int auxcondIdx;
+      int auxnc2Idx;
+      int auxnc3Idx;
+
+:}
+
+// TERMINALS
+terminal ASSIG, PLUS, SUB, MULT, DIV, REST, MAYOR, LOWER, MAYOR_I, LOWER_I, EQUAL, NOT_EQUAL;
+terminal AND_COND, OR_COND, NOT_COND, OPEN_BRACKET, CLOSE_BRACKET, OPEN_CURLY_BRACKET, CLOSE_CURLY_BRACKET, OPEN_SQUARE_BRACKET, CLOSE_SQUARE_BRACKET;
+terminal COMMA, SEMI_COLON, DOT, DOUBLE_DOT, INTEGER_CONSTANT, FLOAT_CONSTANT, STRING_CONSTANT;
+terminal INT, FLOAT, STRING, IF, ELSE, WHILE, WRITE, READ;
 terminal String IDENTIFIER;
-terminal INIT;
-terminal NEGATIVE_CALCULATION;
-terminal SUM_FIRST_PRIMES;
+terminal INIT, NEGATIVE_CALCULATION, SUM_FIRST_PRIMES;
 
-// NO TERMINALES
-non terminal program;
-non terminal block;
-non terminal sentence;
-non terminal var_declaration;
-non terminal var_sencente_dec;
-non terminal data_type;
-non terminal id_list;
-non terminal decition;
-non terminal decitionAux;
-non terminal condition;
-non terminal comparison;
-non terminal comparator;
-non terminal iterator;
-non terminal assignment;
-non terminal s_write;
-non terminal s_read;
-non terminal write_param;
-non terminal read_param;
-non terminal expression;
-non terminal term;
-non terminal factor;
-non terminal negative_calculation;
-non terminal sum_first_primes;
-non terminal c_list;
-non terminal list;
-non terminal trueBody;
-non terminal falseBody;
+// NON TERMINALS (devuelven Integer, el índice del nodo)
+non terminal program, block, sentence, var_declaration, var_sencente_dec, data_type, id_list;
+non terminal decition, condition, comparison, comparator, iterator, assignment;
+non terminal s_write, s_read, write_param, read_param, expression, term, factor;
+non terminal negative_calculation, sum_first_primes, c_list, list;
 
-// Símbolo de partida
+// Start Symbol Definition
 start with program;
 
-program ::= block {:
+program ::= block:b {:
     System.out.println("Compilation Ok");
-    Node root = new Node();
+    ASTManager.setRoot(blockIdx);
+    //Imprimir arbol por consola
+    GestorNodos.imprimirArbol(blockIdx);
+    //Generar .dot para ver visualmente el arbol en pdf
+    IntermediateCodeGenerator.generarDot("salida.dot",GestorNodos.obtenerNodo(blockIdx));
 
-    ASTManager.programIdx.setNode(root);
-    ASTManager.setRoot(root);
-    System.out.println("AST generado: " + root);
-    $$ = root;
-:};
+    //llamar a genera codigo assembler
+        try {
+            AsmCodeGenerator.generateAssembler("salida.asm", blockIdx);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-block ::= sentence;
-block ::= block sentence;
-
-sentence ::= INIT {: System.out.println("Variable declaration starts"); :} OPEN_CURLY_BRACKET var_declaration CLOSE_CURLY_BRACKET {: System.out.println("Variable declaration ends"); :}
-           | decition
-           | iterator
-           | assignment
-           | s_write
-           | s_read
-           | sum_first_primes
-           | negative_calculation
-           ;
-
-// VAR_DECLARATION
-var_declaration ::= var_sencente_dec var_declaration {:
-//    Node declNode = new Node("VarDeclaration");
-//    declNode.addChild($1);
-//    declNode.addChild($2);
-//    ASTManager.var_declarationIdx.setNode(declNode);
-:}
-                    | var_sencente_dec {:
 
 :};
 
-var_sencente_dec ::= id_list DOUBLE_DOT data_type {:
+/*-----------------------------------------
+   BLOCK
+-----------------------------------------*/
+block ::= sentence:s
+        {:
+          blockIdx = sentenceIdx;
+        :}
+        | block:bk sentence:s
+        {:
+          System.out.println("Nueva sentencia en block");
+          blockIdx = GestorNodos.crearNodo(";", blockIdx, sentenceIdx);
+        :};
+
+/*-----------------------------------------
+   SENTENCE
+-----------------------------------------*/
+sentence ::= INIT OPEN_CURLY_BRACKET var_declaration CLOSE_CURLY_BRACKET
+           {:
+             System.out.println("Variable declaration ends");
+             sentenceIdx = vardeclarationIdx;
+           :}
+           | decition:d
+           {:
+             sentenceIdx = decitionIdx;
+           :}
+           | iterator:i
+           {:
+             sentenceIdx = iterationIdx;
+           :}
+           | assignment:a
+           {:
+             System.out.println("Asignación detectada");
+             sentenceIdx = assigIdx;
+           :}
+           | s_write:sw
+           {:
+             sentenceIdx = s_writeIdx;
+           :}
+           | s_read:sr
+           {:
+             sentenceIdx = s_readIdx;
+           :}
+           | sum_first_primes:sf
+           {:
+             sentenceIdx = sum_first_primesIdx;
+           :}
+           | negative_calculation:nc
+           {:
+             sentenceIdx = negative_calculationIdx;
+           :};
+
+/*-----------------------------------------
+   VAR DECLARATION
+-----------------------------------------*/
+var_declaration ::= var_declaration var_sencente_dec
+        {:
+            vardeclarationIdx = GestorNodos.crearNodo(";", vardeclarationIdx, varsentenceIdx);
+
+        :};
+
+var_declaration ::= var_sencente_dec
+        {:
+            vardeclarationIdx = varsentenceIdx;
+
+        :};
+var_sencente_dec ::= id_list DOUBLE_DOT data_type
+  {:
     for (String id : idList) {
-         SymbolTableManager.setDataTypeInTable(id, dataType);
+      SymbolTableManager.setDataTypeInTable(id, dataType);
     }
-    idList.removeAll(idList);
-//    $$ = new Node("VarDecl", $1, $3);
-//    ASTManager.var_sencente_decIdx.setNode($$);
-:};
+    idList.clear();
+    varsentenceIdx = GestorNodos.crearNodo(":",idlistIdx, GestorNodos.crearNodo(dataType.getName()));
 
-data_type ::=
-              INT:type {:
-                System.out.println("Int data type");
-                dataType = DataType.INTEGER_TYPE;
+  :};
 
+data_type ::= INT
+  {:
+    System.out.println("Int data type");
+    dataType = DataType.INTEGER_TYPE;
+  :}
+  | FLOAT
+  {:
+    System.out.println("Float data type");
+    dataType = DataType.FLOAT_TYPE;
+  :}
+  | STRING
+  {:
+    System.out.println("String data type");
+    dataType = DataType.STRING_TYPE;
+  :};
 
-            :}
-            | FLOAT:type {:
-                System.out.println("Float data type");
-                dataType = DataType.FLOAT_TYPE;
-
-            :}
-            | STRING:type {:
-                System.out.println("String data type");
-                dataType = DataType.STRING_TYPE;
-
-            :};
-
-id_list ::= id_list COMMA IDENTIFIER:id {:
-    System.out.println("ID declarado: " + id);
+id_list ::= id_list COMMA IDENTIFIER:id
+  {:
+    System.out.println("ID declared: " + id);
     idList.add(id);
-
-:};
-
-id_list ::= IDENTIFIER:id {:
-    System.out.println("ID declarado: " + id);
+    idlistIdx = GestorNodos.crearNodo(",",idlistIdx,GestorNodos.crearNodo(id));
+  :};
+id_list ::= IDENTIFIER:id
+  {:
+    System.out.println("ID declared: " + id);
     idList.add(id);
+    idlistIdx = GestorNodos.crearNodo(id);
+  :};
 
-:};
+/*-----------------------------------------
+   IF / ELSE
+-----------------------------------------*/
+decition ::= IF OPEN_BRACKET condition:c {: conditionStack.push(conditionIdx); :} CLOSE_BRACKET OPEN_CURLY_BRACKET block:b CLOSE_CURLY_BRACKET
+  {:
+    System.out.println("If statement");
+    int x = conditionStack.pop();
+    decitionIdx = GestorNodos.crearNodo("if", x, blockIdx);
+  :};
 
-decition ::= IF OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {: System.out.println("If statement"); :};
-decition ::= IF OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET ELSE OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {: System.out.println("If else statement"); :};
-condition ::= comparison AND_COND comparison {: System.out.println("And  condition"); :};
-condition ::= comparison OR_COND comparison {: System.out.println("Or  condition"); :};
-condition ::= comparison {: System.out.println("Condition = Comparison"); :};
-condition ::= NOT_COND comparison {: System.out.println("Not condition"); :};
-comparison ::= expression:e1 comparator:c expression:e2 {:
-    System.out.println("Comparison detectada: " + e1 + " " + c + " " + e2);
-    RESULT = "(" + e1 + " " + c + " " + e2 + ")";
-:};
+/*decition ::= IF OPEN_BRACKET condition:c {: conditionStack.push(conditionIdx); :} CLOSE_BRACKET OPEN_CURLY_BRACKET block:b1 {: trueStack.push(blockIdx); :} CLOSE_CURLY_BRACKET ELSE OPEN_CURLY_BRACKET block:b2 {:  falseStack.push(blockIdx); :} CLOSE_CURLY_BRACKET
+  {:
+    System.out.println("If else statement");
+    int y = trueStack.pop();
+    int z = falseStack.pop();
+    int x = conditionStack.pop();
+    cuerpoIdx = GestorNodos.crearNodo("cuerpo", y, z);
+    decitionIdx = GestorNodos.crearNodo("if", x, cuerpoIdx);
+  :};
 
+/*-----------------------------------------
+   CONDITION
+-----------------------------------------*/
+condition ::= comparison:c1 {: auxcmpIdx = comparisonIdx; :} AND_COND comparison:c2
+  {:
+    System.out.println("And condition");
+    conditionIdx = GestorNodos.crearNodo("AND", auxcmpIdx, comparisonIdx);
+  :};
+condition ::= comparison:c1 {: auxcmpIdx = comparisonIdx; :} OR_COND comparison:c2
+  {:
+    System.out.println("Or condition");
+    conditionIdx = GestorNodos.crearNodo("OR", auxcmpIdx, comparisonIdx);
 
-comparison ::= OPEN_BRACKET condition CLOSE_BRACKET {: System.out.println("Comparison"); :};
-comparator ::= MAYOR {: RESULT = ">"; :}
-             | LOWER {: RESULT = "<"; :}
-             | MAYOR_I {: RESULT = ">="; :}
-             | LOWER_I {: RESULT = "<="; :}
-             | EQUAL {: RESULT = "=="; :}
-             | NOT_EQUAL {: RESULT = "!="; :}
-             ;
+  :};
+condition ::= comparison:c
+  {:
+    conditionIdx = comparisonIdx;
+  :};
+condition ::= NOT_COND comparison:c
+  {:
+    conditionIdx = GestorNodos.crearNodo("NOT", comparisonIdx);
+  :};
 
-iterator ::= WHILE OPEN_BRACKET condition CLOSE_BRACKET OPEN_CURLY_BRACKET block CLOSE_CURLY_BRACKET {:
-    System.out.println("Sentencia while");
+/*-----------------------------------------
+   COMPARISON
+-----------------------------------------*/
+comparison ::= expression:e1 {: cizquierdoIdx = expressionIdx; :} comparator:op expression:e2
+  {:
+    System.out.println("Comparison detectada con op: " + op);
+    comparisonIdx = GestorNodos.crearNodo(comparator, cizquierdoIdx, expressionIdx);
+  :}
+  | OPEN_BRACKET condition:c CLOSE_BRACKET
+  {:
 
-:};
+  :};
 
-assignment ::= IDENTIFIER:id ASSIG expression {:
-    System.out.println("Asignación a variable " + id);
-   // if (Utils.checkIdExpresionType(id, true, false)) {
-   //      $$ = new Node("=", new Node(id.toString()), $3);
-   //      ASTManager.assignmentIdx.setNode($$);
-   // }
-:};
-assignment ::= IDENTIFIER:id ASSIG STRING_CONSTANT:str {:
-    System.out.println("Asignación de cadena a variable " + id);
-   // if (Utils.checkIdExpresionType(id, true, true)) {
-    //     $$ = new Node("=", new Node(id.toString()), new Node(str.toString()));
-    //     ASTManager.assignmentIdx.setNode($$);
-    //}
-:};
+comparator ::= MAYOR     {: comparator = ">"; :}
+             | LOWER     {: comparator = "<"; :}
+             | MAYOR_I   {: comparator = ">="; :}
+             | LOWER_I   {: comparator = "<="; :}
+             | EQUAL     {: comparator = "=="; :}
+             | NOT_EQUAL {: comparator = "!="; :};
 
-expression ::= term:t {:
-    System.out.println("Expression = Term con valor: " + t);
-   ASTManager.expressionIdx.setNode(ASTManager.termIdx.getNode());
-:};
+/*-----------------------------------------
+   WHILE
+-----------------------------------------*/
+iterator ::= WHILE OPEN_BRACKET condition:c {: conditionStack.push(conditionIdx); :} CLOSE_BRACKET OPEN_CURLY_BRACKET block:b CLOSE_CURLY_BRACKET
+  {:
+    System.out.println("While statement");
+    int x = conditionStack.pop();
+    iterationIdx = GestorNodos.crearNodo("while", x, blockIdx);
+  :};
 
-expression ::= expression:e PLUS term:t {:
-    System.out.println("Suma detectada: " + e + " + " + t);
-ASTManager.termIdx.setNode(new Node("+",ASTManager.expressionidx.getNode(),ASTManager.termIdx.getNode()));
+/*-----------------------------------------
+   ASSIGNMENT
+-----------------------------------------*/
+assignment ::= IDENTIFIER:id ASSIG expression:e
+  {:
+    System.out.println("Asignación: " + id + " := (nodo " + e + ")");
+    assigIdx = GestorNodos.crearNodo("=", GestorNodos.crearNodo(id), expressionIdx);
+  :}
+  | IDENTIFIER:id ASSIG STRING_CONSTANT:stre
+  {:
+    // Asignar un string,
+    // ej "=", nodo(id), nodo(str)
+    assigIdx = GestorNodos.crearNodo("=", GestorNodos.crearNodo(id), GestorNodos.crearNodo((String) stre));
+  :};
 
-:};
+/*-----------------------------------------
+   EXPRESSION
+-----------------------------------------*/
+expression ::= expression:e {: auxExpressionStack.push(expressionIdx); :} PLUS term:t
+  {:
+    System.out.println("Suma detectada: e=" + e + ", t=" + t);
+    int x = auxExpressionStack.pop();
+    expressionIdx = GestorNodos.crearNodo("+", x, termIdx);
+  :}
+  | expression:e {: auxExpressionStack.push(expressionIdx); :} SUB term:t
+  {:
+    System.out.println("Resta detectada: e=" + e + ", t=" + t);
+     int x = auxExpressionStack.pop();
+    expressionIdx = GestorNodos.crearNodo("-", x, termIdx);
+  :}
+  | term:t
+  {:
+    expressionIdx = termIdx;
+  :};
 
-expression ::= expression:e SUB term:t {:
-    System.out.println("Resta detectada: " + e + " - " + t);
-ASTManager.termIdx.setNode(new Node("-",ASTManager.expressionidx.getNode(),ASTManager.termIdx.getNode()));
-:};
+/*-----------------------------------------
+   TERM
+-----------------------------------------*/
+term ::= term:tt {: auxTermStack.push(termIdx); :} MULT factor:ff
+  {:
+    System.out.println("Multiplicación detectada: tt=" + tt + " ff=" + ff);
+    int x = auxTermStack.pop();
+    termIdx = GestorNodos.crearNodo("*", x, factorIdx);
+  :}
+  | term:tt {: auxTermStack.push(termIdx); :} DIV factor:ff
+  {:
+    System.out.println("División detectada: tt=" + tt + " ff=" + ff);
+    int x = auxTermStack.pop();
+    termIdx = GestorNodos.crearNodo("/", x, factorIdx);
+  :}
+  | factor:f
+  {:
+    termIdx = factorIdx;
+  :};
 
-term ::= factor:f {:
-    System.out.println("Term = factor con valor: " + f);
-  ASTManager.termIdx.setNode(ASTManager.factorIdx.getNode());
-:};
-
-term ::= term:tt MULT factor:ff {:
-    System.out.println("Multiplicación detectada: " + tt + " * " + ff);
-ASTManager.termIdx.setNode(new Node("*",ASTManager.termidx.getNode(),ASTManager.factorIdx.getNode()));
-:};
-
-term ::= term:tt DIV factor:ff {:
-    System.out.println("División detectada: " + tt + " / " + ff);
-    ASTManager.termIdx.setNode(new Node("/",ASTManager.termidx.getNode(),ASTManager.factorIdx.getNode()));
-:};
-
-factor ::= IDENTIFIER:id {:
+/*-----------------------------------------
+   FACTOR
+-----------------------------------------*/
+factor ::= IDENTIFIER:id
+  {:
     System.out.println("Id: " + id);
-    ASTManager.factorIdx.setNode(new Node(id));
-:};
-
-factor ::= INTEGER_CONSTANT:constant {:
+    factorIdx = GestorNodos.crearNodo(id);
+  :}
+  | INTEGER_CONSTANT:constant
+  {:
     System.out.println("Integer constant: " + constant);
-    ASTManager.factorIdx.setNode(new Node(constant));
-:};
-
-factor ::= FLOAT_CONSTANT:constant {:
+    factorIdx = GestorNodos.crearNodo(constant.toString());
+  :}
+  | FLOAT_CONSTANT:constant
+  {:
     System.out.println("Float constant: " + constant);
-    ASTManager.factorIdx.setNode(new Node(constant));
-:};
+    factorIdx = GestorNodos.crearNodo(constant.toString());
+  :}
+  | OPEN_BRACKET expression:e CLOSE_BRACKET
+  {:
+    factorIdx = expressionIdx;
+  :};
 
-factor ::= OPEN_BRACKET expression:e CLOSE_BRACKET {:
-    System.out.println("Factor = (Expression) con valor: " + e);
+/*-----------------------------------------
+   NEGATIVE_CALCULATION
+-----------------------------------------*/
+negative_calculation ::= IDENTIFIER:id ASSIG NEGATIVE_CALCULATION OPEN_BRACKET c_list CLOSE_BRACKET
+  {:
+     System.out.println("negative-calculation function");
 
-   // $$ = e;
-   // ASTManager.factorIdx.setNode($$);
-:};
+    negative_calculationIdx = GestorNodos.crearNodo("%",GestorNodos.crearNodo("@c"),GestorNodos.crearNodo("2"));
+    auxcondIdx = GestorNodos.crearNodo("==",negative_calculationIdx,GestorNodos.crearNodo("0"));
 
-negative_calculation ::= IDENTIFIER:id ASSIG NEGATIVE_CALCULATION OPEN_BRACKET c_list:cl CLOSE_BRACKET {:
-    System.out.println("negative-calculation function");
-  //  $$ = new Node("=", new Node(id), new Node("negative_calculation", cl));
-   // ASTManager.negative_calculationsIdx.setNode($$);
-:};
+    auxncIdx = GestorNodos.crearNodo("=",GestorNodos.crearNodo(id),GestorNodos.crearNodo("@sum"));
+    auxnc2Idx = GestorNodos.crearNodo("=",GestorNodos.crearNodo(id),GestorNodos.crearNodo("@mult"));
 
-c_list ::= c_list:cl COMMA list:l {:
-    cl.addChild(l);
-  //  $$ = cl;
-   // ASTManager.c_listIdx.setNode($$);
-:};
+    auxncIdx = GestorNodos.crearNodo("cuerpo",auxncIdx, auxnc2Idx);
 
-c_list ::= list:l {:
-  //  $$ = new Node("c_list");
-  //  $$.addChild(l);
-  //  ASTManager.c_listIdx.setNode($$);
-:};
+    negative_calculationIdx = GestorNodos.crearNodo("if",auxcondIdx, auxncIdx);
 
-list ::= IDENTIFIER:id {:
-    System.out.println("Id: " + id);
- //   $$ = new Node(id);
-  //  ASTManager.listIdx.setNode($$);
-:};
+    negative_calculationIdx = GestorNodos.crearNodo(";",c_listIdx, negative_calculationIdx);
 
-list ::= FLOAT_CONSTANT:constant {:
+  :};
+
+c_list ::= c_list COMMA list
+  {:
+            auxcondIdx = GestorNodos.crearNodo("<",GestorNodos.crearNodo("@aux"),GestorNodos.crearNodo("0"));
+            auxncIdx = GestorNodos.crearNodo("+",GestorNodos.crearNodo("@c"),GestorNodos.crearNodo("1"));
+            auxncIdx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@c"),auxncIdx);
+            auxnc2Idx = GestorNodos.crearNodo("*",GestorNodos.crearNodo("@mult"),GestorNodos.crearNodo("@aux"));
+            auxnc2Idx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@mult"),auxnc2Idx);
+            auxnc3Idx = GestorNodos.crearNodo("+",GestorNodos.crearNodo("@sum"),GestorNodos.crearNodo("@aux"));
+            auxnc3Idx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@sum"),auxnc3Idx);
+
+            auxnc2Idx = GestorNodos.crearNodo(";",auxnc2Idx,auxnc3Idx);
+            auxncIdx = GestorNodos.crearNodo(";",auxncIdx,auxnc2Idx);
+            ifIdx = GestorNodos.crearNodo("if",auxcondIdx,auxncIdx);
+
+            c_listIdx = GestorNodos.crearNodo(";",c_listIdx,ifIdx);
+
+  :};
+c_list ::= list
+  {:
+
+        c_listIdx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@auxnc"),listIdx);
+        auxncIdx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@c"),GestorNodos.crearNodo("0"));
+        c_listIdx = GestorNodos.crearNodo(";",c_listIdx,auxncIdx);
+        auxncIdx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@mult"),GestorNodos.crearNodo("1"));
+        c_listIdx = GestorNodos.crearNodo(";",c_listIdx,auxncIdx);
+        auxncIdx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@sum"),GestorNodos.crearNodo("0"));
+        c_listIdx = GestorNodos.crearNodo(";",c_listIdx,auxncIdx);
+
+        auxcondIdx = GestorNodos.crearNodo("<",GestorNodos.crearNodo("@aux"),GestorNodos.crearNodo("0"));
+        auxncIdx = GestorNodos.crearNodo("+",GestorNodos.crearNodo("@c"),GestorNodos.crearNodo("1"));
+        auxncIdx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@c"),auxncIdx);
+        auxnc2Idx = GestorNodos.crearNodo("*",GestorNodos.crearNodo("@mult"),GestorNodos.crearNodo("@aux"));
+        auxnc2Idx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@mult"),auxnc2Idx);
+        auxnc3Idx = GestorNodos.crearNodo("+",GestorNodos.crearNodo("@sum"),GestorNodos.crearNodo("@aux"));
+        auxnc3Idx = GestorNodos.crearNodo("=",GestorNodos.crearNodo("@sum"),auxnc3Idx);
+
+        auxnc2Idx = GestorNodos.crearNodo(";",auxnc2Idx,auxnc3Idx);
+        auxncIdx = GestorNodos.crearNodo(";",auxncIdx,auxnc2Idx);
+        ifIdx = GestorNodos.crearNodo("if",auxcondIdx,auxncIdx);
+
+        c_listIdx = GestorNodos.crearNodo(";",c_listIdx,ifIdx);
+
+
+  :};
+
+list ::= IDENTIFIER:id
+  {: System.out.println("Id: " + id);
+    listIdx = GestorNodos.crearNodo(id);
+
+  :};
+list ::= FLOAT_CONSTANT:constant
+  {:
     System.out.println("Float constant: " + constant);
-  //  $$ = new Node(constant);
-  //  ASTManager.listIdx.setNode($$);
-:};
+    listIdx = GestorNodos.crearNodo((String) constant);
 
-list ::= SUB FLOAT_CONSTANT:constant {:
-    String negativeConstant = "-" + constant;
-    System.out.println("Float constant: " + negativeConstant);
-    String constantStr = constant.toString();
-    SymbolEntry entry = new SymbolEntry("_" + negativeConstant, DataType.FLOAT_CONS, negativeConstant);
-    if (SymbolTableManager.existsInTable(constantStr)) {
-        SymbolTableManager.removeFromTable(constantStr);
-    }
-    SymbolTableManager.insertInTable(entry);
-  //  $$ = new Node(negativeConstant);
-  //  ASTManager.listIdx.setNode($$);
-:};
+  :};
 
+/*-----------------------------------------
+   sum_first_primes
+-----------------------------------------*/
 sum_first_primes ::= IDENTIFIER:id ASSIG SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_CONSTANT:num CLOSE_BRACKET {:
     System.out.println("sum-first-primes function");
 
     int n = Integer.parseInt(num.toString());
         if(n <= 0) {
-             throw new SemanticException("Error semántico: sumFirstPrimes requiere un valor mayor que 0, se recibió: " + n);
+             throw new Exception("Error semántico: sumFirstPrimes requiere un valor mayor que 0, se recibió: " + n);
             }
     int aux = 0;
     int aux2 = 2;
@@ -317,23 +461,35 @@ sum_first_primes ::= IDENTIFIER:id ASSIG SUM_FIRST_PRIMES OPEN_BRACKET INTEGER_C
         sum+=aux2;
         aux++;
       }
-      else {
       aux2++;
-      }
     }
-    ASTManager.sum_first_primesIdx.setNode(new Node("=", new Node(id), new Node(sum) ));
+    sum_first_primesIdx = GestorNodos.crearNodo("=",GestorNodos.crearNodo(id),GestorNodos.crearNodo(Integer.toString(sum)));
+   // ASTManager.sum_first_primesIdx.setNode(new Node("=", new Node(id), new Node(sum) ));
 :};
 
-s_write ::= WRITE OPEN_BRACKET STRING_CONSTANT:string_constant CLOSE_BRACKET {:
-    System.out.println("Sentencia write (cadena)");
-  //  $$ = new Node("write", new Node(string_constant.toString()));
-:}
-          | WRITE OPEN_BRACKET IDENTIFIER:id CLOSE_BRACKET {:
-    System.out.println("Sentencia write (identificador)");
-  //  $$ = new Node("write", new Node(id.toString()));
-:};
+/*-----------------------------------------
+   WRITE / READ
+-----------------------------------------*/
+s_write ::= WRITE OPEN_BRACKET write_param CLOSE_BRACKET
+  {:
+    System.out.println("Write statement");
 
-s_read ::= READ OPEN_BRACKET IDENTIFIER:id CLOSE_BRACKET {:
-    System.out.println("Sentencia read");
-  //  $$ = new Node("read", new Node(id.toString()));
-:};
+  :};
+
+write_param ::= STRING_CONSTANT
+  {:
+  :}
+  | IDENTIFIER:id
+  {:
+    System.out.println("Write parameter: " + id);
+  :};
+
+s_read ::= READ OPEN_BRACKET read_param CLOSE_BRACKET
+  {:
+    System.out.println("Read statement");
+  :};
+
+read_param ::= IDENTIFIER:id
+  {:
+    System.out.println("Read parameter: " + id);
+  :};
